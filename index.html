@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Phone Auth (Thunkable)</title>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-g7nNeCfxDjkvVYirPz3rm-bauRaUc8A",
+            authDomain: "goproperty-in.firebaseapp.com",
+            projectId: "goproperty-in",
+            storageBucket: "goproperty-in.appspot.com",
+            messagingSenderId: "496576397440",
+            appId: "1:496576397440:web:7e185da699410a227a6665",
+            measurementId: "G-4RJDKKDR5Q"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        auth.useDeviceLanguage();
+
+        // Set up Invisible reCAPTCHA
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+            size: "invisible"
+        });
+
+        // Send OTP
+        window.sendOTP = function() {
+            let phoneNumber = document.getElementById("phoneNumber").value;
+            if (!phoneNumber) {
+                alert("Enter a valid phone number!");
+                return;
+            }
+
+            signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
+                .then(confirmationResult => {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById("status").innerText = "OTP Sent! Waiting for auto-detection...";
+
+                    // Enable Auto OTP Retrieval (Chrome for Android)
+                    if ('OTPCredential' in window) {
+                        navigator.credentials.get({ otp: { transport: ['sms'] } })
+                            .then(otp => {
+                                document.getElementById("otp").value = otp.code;
+                                verifyOTP(); // Auto-submit the OTP
+                            })
+                            .catch(error => {
+                                console.error("Auto OTP retrieval failed:", error);
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error sending OTP:", error);
+                    alert(error.message);
+                });
+        };
+
+        // Verify OTP
+        window.verifyOTP = function() {
+            let otp = document.getElementById("otp").value;
+            if (!otp) {
+                alert("Enter the OTP!");
+                return;
+            }
+
+            window.confirmationResult.confirm(otp)
+                .then(result => {
+                    document.getElementById("status").innerText = "User Verified!";
+                    console.log("User Details:", result.user);
+
+                    // Send user verification status to Thunkable Web Viewer
+                    window.parent.postMessage(JSON.stringify({ status: "success", user: result.user }), "*");
+                })
+                .catch(error => {
+                    console.error("Error verifying OTP:", error);
+                    alert(error.message);
+                });
+        };
+    </script>
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        input { display: block; width: 80%; margin: 10px auto; padding: 10px; font-size: 16px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <h2>Phone Authentication with Auto OTP</h2>
+    <input type="tel" id="phoneNumber" placeholder="Enter phone number (+91 1234567890)">
+    <div id="recaptcha-container"></div>
+    <button onclick="sendOTP()">Send OTP</button>
+
+    <input type="text" id="otp" placeholder="Waiting for OTP..." readonly>
+    <button onclick="verifyOTP()">Verify OTP</button>
+
+    <p id="status"></p>
+
+</body>
+</html>
