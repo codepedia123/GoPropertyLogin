@@ -3,85 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Phone Auth (Thunkable)</title>
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-        import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-auth.js";
+    <title>MSG91 OTP Authentication</title>
+    <script>
+        const MSG91_API_KEY = "443327AE2iKnsD067cc6d4fP1"; // ✅ Your MSG91 API Key
+        const SENDER_ID = "GOPROPERTY"; // ✅ Replace with your approved Sender ID
+        const TEMPLATE_ID = "67ccfd06d6fc0542a018fde2"; // ✅ Replace with your approved Template ID
 
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-g7nNeCfxDjkvVYirPz3rm-bauRaUc8A",
-            authDomain: "goproperty-in.firebaseapp.com",
-            projectId: "goproperty-in",
-            storageBucket: "goproperty-in.appspot.com",
-            messagingSenderId: "496576397440",
-            appId: "1:496576397440:web:7e185da699410a227a6665",
-            measurementId: "G-4RJDKKDR5Q"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        auth.useDeviceLanguage();
-
-        // Set up Invisible reCAPTCHA
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-            size: "invisible"
-        });
-
-        // Send OTP
-        window.sendOTP = function() {
+        function sendOTP() {
             let phoneNumber = document.getElementById("phoneNumber").value;
             if (!phoneNumber) {
                 alert("Enter a valid phone number!");
                 return;
             }
 
-            signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
-                .then(confirmationResult => {
-                    window.confirmationResult = confirmationResult;
-                    document.getElementById("status").innerText = "OTP Sent! Waiting for auto-detection...";
+            let url = `https://control.msg91.com/api/v5/otp?authkey=${MSG91_API_KEY}&template_id=${TEMPLATE_ID}&mobile=${phoneNumber}&sender=${SENDER_ID}&otp_length=6`;
 
-                    // Enable Auto OTP Retrieval (Chrome for Android)
-                    if ('OTPCredential' in window) {
-                        navigator.credentials.get({ otp: { transport: ['sms'] } })
-                            .then(otp => {
-                                document.getElementById("otp").value = otp.code;
-                                verifyOTP(); // Auto-submit the OTP
-                            })
-                            .catch(error => {
-                                console.error("Auto OTP retrieval failed:", error);
-                            });
+            fetch(url, { method: "GET" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.type === "success") {
+                        document.getElementById("status").innerText = "OTP Sent! Enter OTP below.";
+                    } else {
+                        alert("Error: " + data.message);
                     }
                 })
-                .catch(error => {
-                    console.error("Error sending OTP:", error);
-                    alert(error.message);
-                });
-        };
+                .catch(error => console.error("Error:", error));
+        }
 
-        // Verify OTP
-        window.verifyOTP = function() {
+        function verifyOTP() {
+            let phoneNumber = document.getElementById("phoneNumber").value;
             let otp = document.getElementById("otp").value;
             if (!otp) {
                 alert("Enter the OTP!");
                 return;
             }
 
-            window.confirmationResult.confirm(otp)
-                .then(result => {
-                    document.getElementById("status").innerText = "User Verified!";
-                    console.log("User Details:", result.user);
+            let url = `https://control.msg91.com/api/v5/otp/verify?authkey=${MSG91_API_KEY}&mobile=${phoneNumber}&otp=${otp}`;
 
-                    // Send user verification status to Thunkable Web Viewer
-                    window.parent.postMessage(JSON.stringify({ status: "success", user: result.user }), "*");
+            fetch(url, { method: "GET" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.type === "success") {
+                        document.getElementById("status").innerText = "User Verified!";
+                    } else {
+                        alert("Invalid OTP!");
+                    }
                 })
-                .catch(error => {
-                    console.error("Error verifying OTP:", error);
-                    alert(error.message);
-                });
-        };
+                .catch(error => console.error("Error:", error));
+        }
     </script>
 
     <style>
@@ -93,15 +62,15 @@
 </head>
 <body>
 
-    <h2>Phone Authentication with Auto OTP</h2>
-    <input type="tel" id="phoneNumber" placeholder="Enter phone number (+91 1234567890)">
-    <div id="recaptcha-container"></div>
+    <h2>Phone Authentication (MSG91)</h2>
+    <input type="tel" id="phoneNumber" placeholder="Enter phone number (+91 XXXXXXXXXX)">
     <button onclick="sendOTP()">Send OTP</button>
 
-    <input type="text" id="otp" placeholder="Waiting for OTP..." readonly>
+    <input type="text" id="otp" placeholder="Enter OTP">
     <button onclick="verifyOTP()">Verify OTP</button>
 
     <p id="status"></p>
 
 </body>
 </html>
+
