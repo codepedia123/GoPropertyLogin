@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MSG91 OTP Authentication</title>
+    <title>MSG91 OTP via Google Apps Script</title>
     <script>
-        const MSG91_API_KEY = "443327AE2iKnsD067cc6d4fP1"; // ✅ Your MSG91 API Key
-        const SENDER_ID = "GOPROPERTY"; // ✅ Replace with your approved Sender ID
-        const TEMPLATE_ID = "67ccfd06d6fc0542a018fde2"; // ✅ Replace with your approved Template ID
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFeKgsQWdaWW7ITYkouUHbpl24D7ezUbAz40Ufs9Rmi48MV-4lWvGKH7TKshEYSauQ/exec"; // ✅ Replace with your Apps Script URL
 
         function sendOTP() {
             let phoneNumber = document.getElementById("phoneNumber").value;
@@ -16,18 +14,16 @@
                 return;
             }
 
-            let url = `https://control.msg91.com/api/v5/otp?authkey=${MSG91_API_KEY}&template_id=${TEMPLATE_ID}&mobile=${phoneNumber}&sender=${SENDER_ID}&otp_length=6`;
-
-            fetch(url, { method: "GET" })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.type === "success") {
-                        document.getElementById("status").innerText = "OTP Sent! Enter OTP below.";
-                    } else {
-                        alert("Error: " + data.message);
-                    }
-                })
-                .catch(error => console.error("Error:", error));
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "sendOTP", phone: phoneNumber })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("status").innerText = "OTP Sent!";
+            })
+            .catch(error => console.error("Error:", error));
         }
 
         function verifyOTP() {
@@ -38,18 +34,16 @@
                 return;
             }
 
-            let url = `https://control.msg91.com/api/v5/otp/verify?authkey=${MSG91_API_KEY}&mobile=${phoneNumber}&otp=${otp}`;
-
-            fetch(url, { method: "GET" })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.type === "success") {
-                        document.getElementById("status").innerText = "User Verified!";
-                    } else {
-                        alert("Invalid OTP!");
-                    }
-                })
-                .catch(error => console.error("Error:", error));
+            fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "verifyOTP", phone: phoneNumber, otp: otp })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("status").innerText = "User Verified!";
+            })
+            .catch(error => console.error("Error:", error));
         }
     </script>
 
@@ -62,7 +56,7 @@
 </head>
 <body>
 
-    <h2>Phone Authentication (MSG91)</h2>
+    <h2>Phone Authentication (MSG91 via Apps Script)</h2>
     <input type="tel" id="phoneNumber" placeholder="Enter phone number (+91 XXXXXXXXXX)">
     <button onclick="sendOTP()">Send OTP</button>
 
@@ -73,4 +67,5 @@
 
 </body>
 </html>
+
 
